@@ -134,6 +134,10 @@ export default class ChatBotContainer extends LightningElement {
                 case 'removeFromCart':
                     await this.handleRemoveFromCart(parsedResponse.product);
                     break;
+
+                case 'searchProducts':
+                    await this.handleSearchProducts(parsedResponse.query);
+                    break;
                     
                 case 'showCart':
                     await this.handleShowCart();
@@ -197,6 +201,35 @@ export default class ChatBotContainer extends LightningElement {
         } else {
             this.addBotMessage(`❌ Product "${productName}" not found in cart.`, null);
         }
+        this.isBotTyping = false;
+    }
+
+    async handleSearchProducts(query) {
+        this.isBotTyping = true;
+        const products = await searchProducts({ keyword: query });
+        
+        if (products.length > 0) {
+            let tableHtml = `<table style="width:100%; border-collapse: collapse; font-size:14px;">
+                <thead><tr>
+                    <th style="padding:6px;border-bottom:1px solid #ccc;">Name</th>
+                    <th style="padding:6px;border-bottom:1px solid #ccc;">Price</th>
+                    <th style="padding:6px;border-bottom:1px solid #ccc;">Stock</th>
+                </tr></thead><tbody>`;
+            
+            products.forEach(prod => {
+                tableHtml += `<tr>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${prod.Name}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">₹${prod.Unit_Price__c}</td>
+                    <td style="padding:6px;border-bottom:1px solid #eee;">${prod.Quantity__c ?? 0}</td>
+                </tr>`;
+            });
+            
+            tableHtml += `</tbody></table>`;
+            this.addBotMessage(tableHtml, null, true);
+        } else {
+            this.addBotMessage(`No products found matching "${query}". Try different keywords.`);
+        }
+        
         this.isBotTyping = false;
     }
 
