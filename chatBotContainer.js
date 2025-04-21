@@ -1,6 +1,7 @@
 import { LightningElement, api, track } from 'lwc';
 import getAvailableProducts from '@salesforce/apex/OrderChatController.getAvailableProducts';
 import getAvailableProducts1 from '@salesforce/apex/OrderChatController.getAvailableProducts1';
+import searchProducts from '@salesforce/apex/OrderChatController.searchProducts';
 import addToCart from '@salesforce/apex/OrderChatController.addToCart';
 import getCart from '@salesforce/apex/OrderChatController.getCart';
 import checkout from '@salesforce/apex/OrderChatController.checkout';
@@ -27,7 +28,7 @@ export default class ChatBotContainer extends LightningElement {
         { id: 1, text: 'show products' },
         { id: 2, text: 'show cart' },
         { id: 3, text: 'checkout' },
-        { id: 4, text: 'Need Help' }
+        { id: 4, text: 'need Help' }
     ];
 
     connectedCallback() {
@@ -210,6 +211,45 @@ export default class ChatBotContainer extends LightningElement {
             this.isBotTyping = false;
             this.addBotMessage(res, null);
         }
+
+        else if (input.startsWith('search ')) {
+            this.isBotTyping = true;
+            const keyword = input.replace('search ', '').trim().toLowerCase();
+        
+            const products = await searchProducts({ keyword });
+        
+            if (products.length > 0) {
+                let tableHtml = `<table style="width:100%; border-collapse: collapse; font-size:14px;">`;
+                tableHtml += `<thead><tr>
+                                <th style="padding:6px;border-bottom:1px solid #ccc;">Name</th>
+                                <th style="padding:6px;border-bottom:1px solid #ccc;">Price</th>
+                                <th style="padding:6px;border-bottom:1px solid #ccc;">Stock</th>
+                              </tr></thead><tbody>`;
+        
+                products.forEach(prod => {
+                    tableHtml += `<tr>
+                                    <td style="padding:6px;border-bottom:1px solid #eee;">${prod.Name}</td>
+                                    <td style="padding:6px;border-bottom:1px solid #eee;">₹${prod.Unit_Price__c}</td>
+                                    <td style="padding:6px;border-bottom:1px solid #eee;">${prod.Quantity__c ?? 0}</td>
+                                  </tr>`;
+                });
+        
+                tableHtml += `</tbody></table>`;
+                this.addBotMessage(tableHtml, null, true);
+            } else {
+                this.addBotMessage(`❌ No products found matching "${keyword}".`);
+            }
+        
+            this.isBotTyping = false;
+        }
+
+        else if (input.startsWith('need help')) {
+            this.isBotTyping = true;
+            this.addBotMessage("📢 LLM has not been integrated yet in our chatbot. We are working on this — once it is integrated, I will be able to help more with order-related issues through the chatbot.");
+            this.isBotTyping = false;
+        }
+        
+        
 
         else {
             this.isBotTyping = true;
