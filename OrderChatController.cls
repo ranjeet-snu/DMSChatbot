@@ -7,7 +7,7 @@ public with sharing class OrderChatController {
 
     @AuraEnabled(cacheable=true)
     public static Map<String, Object> getAvailableProducts1() {
-    // 1) Load the metadata configuration
+    // 1) code for Loading the metadata configuration
     List<DMS_Product_Field_Config__mdt> configs = [
         SELECT Field_API_Name__c, Display_Label__c, Sort_Order__c
         FROM DMS_Product_Field_Config__mdt
@@ -50,7 +50,19 @@ public with sharing class OrderChatController {
         'labels'   => fieldLabelMap,
         'products' => productList
     };
+    }
+
+    @AuraEnabled(cacheable=true)
+    public static List<DMS_Product__c> searchProducts(String keyword) {
+    String searchKey = '%' + keyword.toLowerCase() + '%';
+    return [
+        SELECT Id, Name, Unit_Price__c, Quantity__c
+        FROM DMS_Product__c
+        WHERE Name != null AND
+              Name LIKE :searchKey
+    ];
 }
+
 
 
     @AuraEnabled
