@@ -23,13 +23,15 @@ export default class ChatBotContainer extends LightningElement {
     userAvatar = userAvatar;
     chatbotLogo = chatbotLogo;
 
+    defaultQuickReplies = [
+        { id: 1, text: 'show products' },
+        { id: 2, text: 'show cart' },
+        { id: 3, text: 'checkout' },
+        { id: 4, text: 'Need Help' }
+    ];
+
     connectedCallback() {
-        this.addBotMessage('👋 Hello! Type "show products", "add [product]", "show cart", "remove", or "checkout".', [
-            { id: 1, text: 'show products' },
-            { id: 2, text: 'show cart' },
-            { id: 3, text: 'checkout' },
-            { id: 4, text: 'Need Help' }
-        ]);
+        this.addBotMessage('Welcome to the DMS Ordering Assistant! Type "show products", "add [product]", "show cart", "remove", or "checkout".', this.defaultQuickReplies);
     }
 
     toggleChat() {
@@ -65,7 +67,7 @@ export default class ChatBotContainer extends LightningElement {
         this.scrollToBottom();
     }
 
-    addBotMessage(text, quickReplies = [], isHtml = false) {
+    addBotMessage(text, quickReplies = null, isHtml = false) {
         this.messages = [...this.messages, {
             id: Date.now(),
             text: text,
@@ -76,8 +78,10 @@ export default class ChatBotContainer extends LightningElement {
             senderAlt: 'Assistant',
             timestamp: this.getCurrentTime()
         }];
-        this.quickReplies = quickReplies;
-        this.showQuickReplies = quickReplies.length > 0;
+        if (quickReplies !== null) {
+            this.quickReplies = quickReplies;
+            this.showQuickReplies = quickReplies.length > 0;
+        }
         this.scrollToBottom();
     }
 
@@ -102,21 +106,19 @@ export default class ChatBotContainer extends LightningElement {
     async processInput(input) {
         if (input === 'show products') {
             this.isBotTyping = true;
-        
-            // 1) Fetch the dynamic field list, labels, and product data
-            const result   = await getAvailableProducts1();
-            const fields   = result.fields;    // e.g. ['Name','Unit_Price__c','Category__c']
-            const labels   = result.labels;    // map from API name → Display_Label__c
-            const products = result.products;  // array of { Id: '...', Name: '...', Unit_Price__c: 100, ... }
-        
-            // 2) Build the HTML table
+
+            const result = await getAvailableProducts1();
+            const fields = result.fields;
+            const labels = result.labels;
+            const products = result.products;
+
             let tableHtml = `<table style="width:100%; border-collapse: collapse; font-size:14px;">`;
             tableHtml += `<thead><tr>`;
             fields.forEach(f => {
                 tableHtml += `<th style="padding:6px;border-bottom:1px solid #ccc;">${labels[f]}</th>`;
             });
             tableHtml += `</tr></thead><tbody>`;
-        
+
             products.forEach(prod => {
                 tableHtml += `<tr>`;
                 fields.forEach(f => {
@@ -124,14 +126,13 @@ export default class ChatBotContainer extends LightningElement {
                 });
                 tableHtml += `</tr>`;
             });
-        
+
             tableHtml += `</tbody></table>`;
-        
-            // 3) Render as an HTML bot message
+
             this.isBotTyping = false;
-            this.addBotMessage(tableHtml, [], true);
+            this.addBotMessage(tableHtml, null, true); // Keep quick replies
         }
-        
+
         else if (input.startsWith('add ')) {
             this.isBotTyping = true;
             const name = input.replace('add ', '').trim().toLowerCase();
@@ -140,12 +141,13 @@ export default class ChatBotContainer extends LightningElement {
             if (match) {
                 await addToCart({ contactId: this.recordId, productId: match.Id });
                 this.isBotTyping = false;
-                this.addBotMessage(`✅ ${match.Name} added to cart.`);
+                this.addBotMessage(`✅ ${match.Name} added to cart.`, null);
             } else {
                 this.isBotTyping = false;
-                this.addBotMessage(`❌ Product not found.`);
+                this.addBotMessage(`❌ Product not found.`, null);
             }
         }
+
         else if (input === 'show cart') {
             this.isBotTyping = true;
             const cartData = await getCart({ contactId: this.recordId });
@@ -189,28 +191,31 @@ export default class ChatBotContainer extends LightningElement {
                     </div>
                 `;
 
-                this.addBotMessage(cartHtml, [], true);
+                this.addBotMessage(cartHtml, null, true); // Preserve quick replies
             } else {
-                this.addBotMessage('🛒 Your cart is empty.');
+                this.addBotMessage('🛒 Your cart is empty.', null);
             }
         }
+
         else if (input === 'remove') {
             this.isBotTyping = true;
             const res = await removeItem({ contactId: this.recordId });
             this.isBotTyping = false;
-            this.addBotMessage(res);
+            this.addBotMessage(res, null);
         }
+
         else if (input === 'checkout') {
             this.isBotTyping = true;
             const res = await checkout({ contactId: this.recordId });
             this.isBotTyping = false;
-            this.addBotMessage(res);
+            this.addBotMessage(res, null);
         }
+
         else {
             this.isBotTyping = true;
             setTimeout(() => {
                 this.isBotTyping = false;
-                this.addBotMessage("🤖 Sorry, I didn't understand that.");
+                this.addBotMessage("🤖 Sorry, I didn't understand that.", null);
             }, 1000);
         }
     }
