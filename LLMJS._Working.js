@@ -106,16 +106,19 @@ export default class ChatBotContainer extends LightningElement {
     }
 
     async processInput(input) {
-        this.isBotTyping = true;
+        this.isBotTyping = true; 
         
         try {
             // First get the intent from Gemini
             const geminiResponse = await getGeminiResponse({ userMessage: input });
+            console.log('Gemini response:', geminiResponse);
             
             // Parse the JSON response
             let parsedResponse;
             try {
                 parsedResponse = JSON.parse(geminiResponse);
+                console.log('Parsed Gemini response:', parsedResponse);
+                
             } catch (e) {
                 console.error('Error parsing Gemini response:', e);
                 parsedResponse = { action: 'unknown' };
@@ -125,6 +128,7 @@ export default class ChatBotContainer extends LightningElement {
             switch(parsedResponse.action) {
                 case 'addToCart':
                     await this.handleAddToCart(parsedResponse.product, parsedResponse.quantity || 1);
+                    console.log("addTocart from known Input");
                     break;
                     
                 case 'removeFromCart':
@@ -134,6 +138,8 @@ export default class ChatBotContainer extends LightningElement {
                 case 'showCart':
                     await this.handleShowCart();
                     break;
+
+        
                     
                 case 'checkout':
                     await this.handleCheckout();
@@ -141,6 +147,7 @@ export default class ChatBotContainer extends LightningElement {
                     
                 case 'help':
                     this.handleHelp();
+                    console.log("help from known Input");
                     break;
                     
                 case 'showProducts':
@@ -247,6 +254,8 @@ export default class ChatBotContainer extends LightningElement {
         this.isBotTyping = false;
     }
 
+    
+
     handleHelp() {
         this.addBotMessage(
             "I can help you with:\n" +
@@ -296,6 +305,7 @@ export default class ChatBotContainer extends LightningElement {
         } else if (input.toLowerCase().includes('checkout') || input.toLowerCase().includes('buy')) {
             this.handleCheckout();
         } else if (input.toLowerCase().includes('help')) {
+            console.log("help from Unknown Input");
             this.handleHelp();
         } else {
             this.addBotMessage("🤖 Sorry, I didn't understand that. Type 'help' to see what I can do.", null);
