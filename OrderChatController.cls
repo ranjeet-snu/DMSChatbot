@@ -5,6 +5,54 @@ public with sharing class OrderChatController {
         return [SELECT Id, Name, Unit_Price__c FROM DMS_Product__c];
     }
 
+    @AuraEnabled(cacheable=true)
+    public static Map<String, Object> getAvailableProducts1() {
+    // 1) Load the metadata configuration
+    List<DMS_Product_Field_Config__mdt> configs = [
+        SELECT Field_API_Name__c, Display_Label__c, Sort_Order__c
+        FROM DMS_Product_Field_Config__mdt
+        WHERE Is_Active__c = true
+          AND Object_API_Name__c = 'DMS_Product__c'
+        ORDER BY Sort_Order__c ASC
+    ];
+
+    // 2) Build lists of API names and labels
+    List<String> fieldApiNames = new List<String>();
+    Map<String, String> fieldLabelMap = new Map<String, String>();
+    for (DMS_Product_Field_Config__mdt cfg : configs) {
+        fieldApiNames.add(cfg.Field_API_Name__c);
+        fieldLabelMap.put(cfg.Field_API_Name__c, cfg.Display_Label__c);
+    }
+
+    // 3) Dynamically query those fields off DMS_Product__c
+    String soql = 'SELECT Id';
+    for (String f : fieldApiNames) {
+        soql += ', ' + f;
+    }
+    soql += ' FROM DMS_Product__c LIMIT 100';
+    List<SObject> records = Database.query(soql);
+
+    // 4) Massage into simple maps for JSON
+    List<Map<String, Object>> productList = new List<Map<String, Object>>();
+    for (SObject rec : records) {
+        Map<String, Object> row = new Map<String, Object>();
+        for (String f : fieldApiNames) {
+            row.put(f, rec.get(f));
+        }
+        // include the Id so JS can call addToCart
+        row.put('Id', rec.get('Id'));
+        productList.add(row);
+    }
+
+    // 5) Return fields, labels, and data
+    return new Map<String, Object>{
+        'fields'   => fieldApiNames,
+        'labels'   => fieldLabelMap,
+        'products' => productList
+    };
+}
+
+
     @AuraEnabled
     public static String addToCart(String contactId, String productId) {
         Contact c = [SELECT Id, AccountId FROM Contact WHERE Id = :contactId LIMIT 1];
@@ -87,7 +135,7 @@ public with sharing class OrderChatController {
     }
 
     @AuraEnabled
-public static String checkout(Id contactId) {
+    public static String checkout(Id contactId) {
     List<DMS_Order__c> orders = [
         SELECT Id, Name FROM DMS_Order__c 
         WHERE Contact__c = :contactId 
