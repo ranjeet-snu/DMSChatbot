@@ -1,5 +1,6 @@
 import { LightningElement, api, track } from 'lwc';
 import getAvailableProducts from '@salesforce/apex/OrderChatController.getAvailableProducts';
+import getAvailableProducts1 from '@salesforce/apex/OrderChatController.getAvailableProducts1';
 import addToCart from '@salesforce/apex/OrderChatController.addToCart';
 import getCart from '@salesforce/apex/OrderChatController.getCart';
 import checkout from '@salesforce/apex/OrderChatController.checkout';
@@ -101,29 +102,36 @@ export default class ChatBotContainer extends LightningElement {
     async processInput(input) {
         if (input === 'show products') {
             this.isBotTyping = true;
-            const products = await getAvailableProducts();
-            let tableHtml = `
-                <table style="width:100%; border-collapse: collapse; font-size: 14px;">
-                    <thead>
-                        <tr>
-                            <th style="text-align: left; padding: 6px; border-bottom: 1px solid #ccc;">Product</th>
-                            <th style="text-align: left; padding: 6px; border-bottom: 1px solid #ccc;">Price</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            `;
-            products.forEach(p => {
-                tableHtml += `
-                    <tr>
-                        <td style="padding: 6px; border-bottom: 1px solid #eee;">${p.Name}</td>
-                        <td style="padding: 6px; border-bottom: 1px solid #eee;">₹${p.Unit_Price__c}</td>
-                    </tr>
-                `;
+        
+            // 1) Fetch the dynamic field list, labels, and product data
+            const result   = await getAvailableProducts1();
+            const fields   = result.fields;    // e.g. ['Name','Unit_Price__c','Category__c']
+            const labels   = result.labels;    // map from API name → Display_Label__c
+            const products = result.products;  // array of { Id: '...', Name: '...', Unit_Price__c: 100, ... }
+        
+            // 2) Build the HTML table
+            let tableHtml = `<table style="width:100%; border-collapse: collapse; font-size:14px;">`;
+            tableHtml += `<thead><tr>`;
+            fields.forEach(f => {
+                tableHtml += `<th style="padding:6px;border-bottom:1px solid #ccc;">${labels[f]}</th>`;
             });
+            tableHtml += `</tr></thead><tbody>`;
+        
+            products.forEach(prod => {
+                tableHtml += `<tr>`;
+                fields.forEach(f => {
+                    tableHtml += `<td style="padding:6px;border-bottom:1px solid #eee;">${prod[f] ?? ''}</td>`;
+                });
+                tableHtml += `</tr>`;
+            });
+        
             tableHtml += `</tbody></table>`;
+        
+            // 3) Render as an HTML bot message
             this.isBotTyping = false;
             this.addBotMessage(tableHtml, [], true);
-        } 
+        }
+        
         else if (input.startsWith('add ')) {
             this.isBotTyping = true;
             const name = input.replace('add ', '').trim().toLowerCase();
