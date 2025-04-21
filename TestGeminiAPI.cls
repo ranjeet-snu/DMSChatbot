@@ -52,6 +52,10 @@ public with sharing class TestGeminiAPI {
                     return 'Gemini Response: ' + (String) partResp.get('text');
                 }
             }
+
+
+
+//System.debug(TestGeminiAPI.testGemini());       to run check
         }
 
         return 'Gemini API Error: ' + res.getStatusCode() + ' - ' + res.getBody();
