@@ -66,7 +66,7 @@ public with sharing class OrderChatController {
 
 
     @AuraEnabled
-    public static String addToCart(String contactId, String productId) {
+    public static String addToCart(String contactId, String productId, Integer quantity) {
         Contact c = [SELECT Id, AccountId FROM Contact WHERE Id = :contactId LIMIT 1];
 
         DMS_Order__c order = getOrCreateDraftOrder(c.Id, c.AccountId);
@@ -114,37 +114,38 @@ public with sharing class OrderChatController {
     }
 
     @AuraEnabled
-    public static Map<String, Object> getCart(String contactId) {
-        List<DMS_Order__c> orders = [
-            SELECT Id FROM DMS_Order__c
-            WHERE Contact__c = :contactId AND Order_Status__c = 'Draft' LIMIT 1
+public static Map<String, Object> getCart(String contactId) {
+    List<DMS_Order__c> orders = [
+        SELECT Id FROM DMS_Order__c
+        WHERE Contact__c = :contactId AND Order_Status__c = 'Draft' LIMIT 1
+    ];
+    Map<String, Object> cart = new Map<String, Object>();
+    if (!orders.isEmpty()) {
+        DMS_Order__c order = orders[0];
+        List<Order_Line_Item__c> items = [
+            SELECT DMS_Product_Name__r.Name, DMS_Product_Name__c, Quantity__c, Unit_Price__c, Final_Price__c 
+            FROM Order_Line_Item__c 
+            WHERE DMS_Order__c = :order.Id
         ];
-        Map<String, Object> cart = new Map<String, Object>();
-        if (!orders.isEmpty()) {
-            DMS_Order__c order = orders[0];
-            List<Order_Line_Item__c> items = [
-                SELECT DMS_Product_Name__r.Name, Quantity__c, Unit_Price__c, Final_Price__c 
-                FROM Order_Line_Item__c 
-                WHERE DMS_Order__c = :order.Id
-            ];
 
-            Decimal grandTotal = 0;
-            List<Map<String, Object>> itemList = new List<Map<String, Object>>();
-            for (Order_Line_Item__c item : items) {
-                Map<String, Object> i = new Map<String, Object>();
-                i.put('productName', item.DMS_Product_Name__r.Name);
-                i.put('quantity', item.Quantity__c);
-                i.put('unitPrice', item.Unit_Price__c);
-                i.put('total', item.Quantity__c*item.Final_Price__c);
-                itemList.add(i);
-                grandTotal += item.Quantity__c*item.Final_Price__c;
-            }
-
-            cart.put('items', itemList);
-            cart.put('grandTotal', grandTotal);
+        Decimal grandTotal = 0;
+        List<Map<String, Object>> itemList = new List<Map<String, Object>>();
+        for (Order_Line_Item__c item : items) {
+            Map<String, Object> i = new Map<String, Object>();
+            i.put('productName', item.DMS_Product_Name__r.Name);
+            i.put('productId', item.DMS_Product_Name__c); // Add product ID
+            i.put('quantity', item.Quantity__c);
+            i.put('unitPrice', item.Unit_Price__c);
+            i.put('total', item.Quantity__c*item.Final_Price__c);
+            itemList.add(i);
+            grandTotal += item.Quantity__c*item.Final_Price__c;
         }
-        return cart;
+
+        cart.put('items', itemList);
+        cart.put('grandTotal', grandTotal);
     }
+    return cart;
+}
 
     @AuraEnabled
     public static String checkout(Id contactId) {
@@ -165,24 +166,35 @@ public with sharing class OrderChatController {
     }
 }
 
+@AuraEnabled
+public static String removeItem(String contactId, String productId) {
+    // 1. Get the draft order for the contact
+    List<DMS_Order__c> orders = [
+        SELECT Id FROM DMS_Order__c
+        WHERE Contact__c = :contactId AND Order_Status__c = 'Draft' LIMIT 1
+    ];
 
-    @AuraEnabled
-    public static String removeItem(String contactId, String productId) {
-        List<DMS_Order__c> orders = [
-            SELECT Id FROM DMS_Order__c
-            WHERE Contact__c = :contactId AND Order_Status__c = 'Draft' LIMIT 1
-        ];
-        if (!orders.isEmpty()) {
-            DMS_Order__c order = orders[0];
-            List<Order_Line_Item__c> itemsToRemove = [
-                SELECT Id FROM Order_Line_Item__c
-                WHERE DMS_Order__c = :order.Id AND DMS_Product_Name__c = :productId
-            ];
-            if (!itemsToRemove.isEmpty()) {
-                delete itemsToRemove;
-                return 'Item removed from cart.';
-            }
-        }
-        return 'No item to remove.';
+    if (orders.isEmpty()) {
+        return '⚠️ No active cart found.';
     }
+
+    Id orderId = orders[0].Id;
+
+    // 2. Find the order line item for this product
+    List<Order_Line_Item__c> items = [
+        SELECT Id 
+        FROM Order_Line_Item__c 
+        WHERE DMS_Order__c = :orderId AND DMS_Product_Name__c = :productId
+    ];
+
+    if (items.isEmpty()) {
+        return '⚠️ :Product not found in your cart.';
+    }
+
+    delete items;
+
+    return '🗑️ Product removed from cart.';
+}
+
+
 }
