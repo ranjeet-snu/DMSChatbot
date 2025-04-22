@@ -269,7 +269,12 @@ export default class ChatBotContainer extends LightningElement {
             this.isBotTyping = false;
         }
         
-        
+        else if (input === 'checkout') {
+            this.isBotTyping = true;
+            const res = await checkout({ contactId: this.recordId });
+            this.isBotTyping = false;
+            this.addBotMessage(res);
+        }
 
         else {
             this.isBotTyping = true;
