@@ -137,6 +137,7 @@ export default class ChatBotContainer extends LightningElement {
         else if (input.startsWith('add ')) {
             this.isBotTyping = true;
             const name = input.replace('add ', '').trim().toLowerCase();
+            console.log('name', name);
             const products = await getAvailableProducts();
             const match = products.find(p => p.Name.toLowerCase() === name);
             if (match) {
@@ -198,24 +199,43 @@ export default class ChatBotContainer extends LightningElement {
             }
         }
 
-        else if (input === 'remove') {
+        
+
+        else if (input.startsWith('remove ')) {
             this.isBotTyping = true;
-            const res = await removeItem({ contactId: this.recordId });
+            const productName = input.replace('remove ', '').trim().toLowerCase();
+            
+            try {
+                // Get all available products to find the ID
+                const products = await getAvailableProducts();
+                const product = products.find(p => p.Name.toLowerCase() === productName);
+                
+                if (product) {
+                    const result = await removeItem({
+                        contactId: this.recordId,
+                        productId: product.Id
+                    });
+                    
+                    if (result.includes('removed')) {
+                        this.addBotMessage(`✅ ${product.Name} removed from cart.`, null);
+                    } else {
+                        this.addBotMessage(`❌ ${result}`, null);
+                    }
+                } else {
+                    this.addBotMessage(`❌ Product "${productName}" not found.`, null);
+                }
+            } catch (error) {
+                this.addBotMessage(`❌ Error removing item: ${error.body?.message || error.message}`, null);
+            }
+            
             this.isBotTyping = false;
-            this.addBotMessage(res, null);
         }
 
-        else if (input === 'checkout') {
-            this.isBotTyping = true;
-            const res = await checkout({ contactId: this.recordId });
-            this.isBotTyping = false;
-            this.addBotMessage(res, null);
-        }
 
         else if (input.startsWith('search ')) {
             this.isBotTyping = true;
             const keyword = input.replace('search ', '').trim().toLowerCase();
-        
+            console.log('keyword', keyword);
             const products = await searchProducts({ keyword });
         
             if (products.length > 0) {
