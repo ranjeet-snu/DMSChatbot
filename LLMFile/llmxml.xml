@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<LightningComponentBundle xmlns="http://soap.sforce.com/2006/04/metadata">
+    <apiVersion>63.0</apiVersion>
+    <isExposed>true</isExposed>
+    <targets>
+        <target>lightning__RecordPage</target> <!-- Makes the LWC available on record pages -->
+        <target>lightning__AppPage</target> <!-- Makes the LWC available on app pages -->
+        <target>lightning__HomePage</target> <!-- Makes the LWC available on home pages -->
+        <target>lightningCommunity__Default</target>
+        
+        
+        
+         <!-- Makes the LWC available on community pages -->
+    </targets>
+</LightningComponentBundle>
