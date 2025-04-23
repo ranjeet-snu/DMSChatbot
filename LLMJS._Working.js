@@ -33,7 +33,25 @@ export default class ChatBotContainer extends LightningElement {
     ];
 
     connectedCallback() {
-        this.addBotMessage('Welcome to the DMS Ordering Assistant! How can I help you today?', this.defaultQuickReplies);
+        this.addBotMessage(
+            `<div>
+                <strong>👋 Hey there! Welcome to our ChatBot 😊</strong><br><br>
+                You can get started by clicking or typing any of the options below:
+                <ul>
+                    <li>👉 <strong>Show Products</strong> – to browse our products</li>
+                    <li>🛒 <strong>Show Cart</strong> – to see what you've added</li>
+                    <li>✅ <strong>Checkout</strong> – to place your order</li>
+                    <li>❓ <strong>Need Help</strong> – if you're unsure what to do next</li>
+                </ul>
+                <p><strong>✍️ Tip:</strong> You can also type commands directly!</p>
+                <ul>
+                    <li>➕ <strong>Add [product name]</strong> — to add an item to your cart</li>
+                    <li>❌ <strong>Remove [product name]</strong> — to remove an item from your cart</li>
+                </ul>
+            </div>`,
+            this.defaultQuickReplies,
+            true
+        );
     }
 
     toggleChat() {
@@ -132,11 +150,11 @@ export default class ChatBotContainer extends LightningElement {
                     break;
                     
                 case 'removeFromCart':
-                    await this.handleRemoveFromCart(parsedResponse.product);
+                    await this.handleRemoveFromCart(parsedResponse.product,parsedResponse.quantity);
                     break;
 
                 case 'searchProducts':
-                    await this.handleSearchProducts(parsedResponse.query);
+                    await this.handleSearchProducts(parsedResponse.product);
                     break;
                     
                 case 'showCart':
@@ -188,14 +206,15 @@ export default class ChatBotContainer extends LightningElement {
         this.isBotTyping = false;
     }
 
-    async handleRemoveFromCart(productName) {
+    async handleRemoveFromCart(productName,quantity) {
         const cartData = await getCart({ contactId: this.recordId });
         const item = cartData.items.find(i => i.productName.toLowerCase() === productName.toLowerCase());
         
         if (item) {
             const res = await removeItem({ 
                 contactId: this.recordId,
-                productId: item.productId
+                productId: item.productId,
+                quantity: quantity
             });
             this.addBotMessage(`✅ ${item.productName} removed from cart.`, null);
         } else {
@@ -204,30 +223,34 @@ export default class ChatBotContainer extends LightningElement {
         this.isBotTyping = false;
     }
 
-    async handleSearchProducts(query) {
+    async handleSearchProducts(productName) {
         this.isBotTyping = true;
-        const products = await searchProducts({ keyword: query });
+        const products = await searchProducts({ keyword: productName });
         
         if (products.length > 0) {
-            let tableHtml = `<table style="width:100%; border-collapse: collapse; font-size:14px;">
-                <thead><tr>
-                    <th style="padding:6px;border-bottom:1px solid #ccc;">Name</th>
-                    <th style="padding:6px;border-bottom:1px solid #ccc;">Price</th>
-                    <th style="padding:6px;border-bottom:1px solid #ccc;">Stock</th>
-                </tr></thead><tbody>`;
+            // First add the availability message
+            this.addBotMessage(`Yes, ${productName} is available.`);
             
-            products.forEach(prod => {
-                tableHtml += `<tr>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${prod.Name}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">₹${prod.Unit_Price__c}</td>
-                    <td style="padding:6px;border-bottom:1px solid #eee;">${prod.Quantity__c ?? 0}</td>
-                </tr>`;
-            });
+            // // Then show the table with details
+            // let tableHtml = `<table style="width:100%; border-collapse: collapse; font-size:14px;">
+            //     <thead><tr>
+            //         <th style="padding:6px;border-bottom:1px solid #ccc;">Name</th>
+            //         <th style="padding:6px;border-bottom:1px solid #ccc;">Price</th>
+            //         <th style="padding:6px;border-bottom:1px solid #ccc;">Stock</th>
+            //     </tr></thead><tbody>`;
             
-            tableHtml += `</tbody></table>`;
-            this.addBotMessage(tableHtml, null, true);
+            // products.forEach(prod => {
+            //     tableHtml += `<tr>
+            //         <td style="padding:6px;border-bottom:1px solid #eee;">${prod.Name}</td>
+            //         <td style="padding:6px;border-bottom:1px solid #eee;">₹${prod.Unit_Price__c}</td>
+            //         <td style="padding:6px;border-bottom:1px solid #eee;">${prod.Quantity__c ?? 0}</td>
+            //     </tr>`;
+            // });
+            
+            // tableHtml += `</tbody></table>`;
+            // this.addBotMessage(tableHtml, null, true);
         } else {
-            this.addBotMessage(`No products found matching "${query}". Try different keywords.`);
+            this.addBotMessage(`No, ${productName} is not available.`);
         }
         
         this.isBotTyping = false;
