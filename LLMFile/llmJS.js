@@ -10,6 +10,8 @@ import botAvatar from '@salesforce/resourceUrl/botAvatar';
 import userAvatar from '@salesforce/resourceUrl/userAvatar';
 import chatbotLogo from '@salesforce/resourceUrl/chatbotLogo';
 import getGeminiResponse from '@salesforce/apex/GeminiController.getGeminiResponse';
+import mic from '@salesforce/resourceUrl/mic';
+import chatStart from '@salesforce/resourceUrl/chatStart';
 
 export default class ChatBotContainer extends LightningElement {
     @api recordId;
@@ -24,6 +26,8 @@ export default class ChatBotContainer extends LightningElement {
     botAvatar = botAvatar;
     userAvatar = userAvatar;
     chatbotLogo = chatbotLogo;
+    mic = mic;
+    chatStart = chatStart;
 
     defaultQuickReplies = [
         { id: 1, text: 'show products' },
