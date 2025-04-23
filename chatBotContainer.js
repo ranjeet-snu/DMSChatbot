@@ -9,6 +9,7 @@ import removeItem from '@salesforce/apex/OrderChatController.removeItem';
 import botAvatar from '@salesforce/resourceUrl/botAvatar';
 import userAvatar from '@salesforce/resourceUrl/userAvatar';
 import chatbotLogo from '@salesforce/resourceUrl/chatbotLogo';
+import getGeminiResponse from '@salesforce/apex/GeminiController.getGeminiResponse';
 
 export default class ChatBotContainer extends LightningElement {
     @api recordId;
@@ -32,7 +33,25 @@ export default class ChatBotContainer extends LightningElement {
     ];
 
     connectedCallback() {
-        this.addBotMessage('Welcome to the DMS Ordering Assistant! Type "show products", "add [product]", "show cart", "remove", or "checkout".', this.defaultQuickReplies);
+        this.addBotMessage(
+            `<div>
+                <strong>👋 Hey there! Welcome to our ChatBot 😊</strong><br><br>
+                You can get started by clicking or typing any of the options below:
+                <ul>
+                    <li>👉 <strong>Show Products</strong> – to browse our products</li>
+                    <li>🛒 <strong>Show Cart</strong> – to see what you've added</li>
+                    <li>✅ <strong>Checkout</strong> – to place your order</li>
+                    <li>❓ <strong>Need Help</strong> – if you're unsure what to do next</li>
+                </ul>
+                <p><strong>✍️ Tip:</strong> You can also type commands directly!</p>
+                <ul>
+                    <li>➕ <strong>Add [product name]</strong> — to add an item to your cart</li>
+                    <li>❌ <strong>Remove [product name]</strong> — to remove an item from your cart</li>
+                </ul>
+            </div>`,
+            this.defaultQuickReplies,
+            true
+        );
     }
 
     toggleChat() {
