@@ -79,14 +79,14 @@ public with sharing class OrderChatController {
 
         if (!existingItems.isEmpty()) {
             Order_Line_Item__c item = existingItems[0];
-            item.Quantity__c += 1;
+            item.Quantity__c += quantity;
             update item;
         } else {
             DMS_Product__c product = [SELECT Id, Unit_Price__c FROM DMS_Product__c WHERE Id = :productId LIMIT 1];
             Order_Line_Item__c newItem = new Order_Line_Item__c(
                 DMS_Order__c = order.Id,
                 DMS_Product_Name__c = product.Id,
-                Quantity__c = 1,
+                Quantity__c = quantity,
                 Unit_Price__c = product.Unit_Price__c,
                 Final_Price__c = product.Unit_Price__c // you can later apply discounts if needed
             );
