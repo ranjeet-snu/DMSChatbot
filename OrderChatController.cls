@@ -167,39 +167,53 @@ public static Map<String, Object> getCart(String contactId) {
 }
 
 @AuraEnabled
-public static String removeItem(String contactId, String productId) {
-    // 1. Get the draft order for the contact
-    List<DMS_Order__c> orders = [
-        SELECT Id FROM DMS_Order__c
-        WHERE Contact__c = :contactId AND Order_Status__c = 'Draft' LIMIT 1
-    ];
+public static String removeItem(String contactId, String productId, Integer quantity) {
+    try {
+        // 1. Get the draft order for the contact
+        List<DMS_Order__c> orders = [
+            SELECT Id FROM DMS_Order__c
+            WHERE Contact__c = :contactId AND Order_Status__c = 'Draft' 
+            LIMIT 1
+        ];
 
-    if (orders.isEmpty()) {
-        return '⚠️ No active cart found.';
-    }
+        if (orders.isEmpty()) {
+            return '⚠️ No active cart found.';
+        }
 
-    Id orderId = orders[0].Id;
+        Id orderId = orders[0].Id;
 
-    // 2. Find the order line item for this product
-    List<Order_Line_Item__c> items = [
-        SELECT Id, Quantity__c 
-        FROM Order_Line_Item__c 
-        WHERE DMS_Order__c = :orderId AND DMS_Product_Name__c = :productId
-        LIMIT 1
-    ];
+        // 2. Find the order line item for this product
+        List<Order_Line_Item__c> items = [
+            SELECT Id, Quantity__c, DMS_Product_Name__r.Name 
+            FROM Order_Line_Item__c 
+            WHERE DMS_Order__c = :orderId AND DMS_Product_Name__c = :productId
+            LIMIT 1
+        ];
 
-    if (items.isEmpty()) {
-        return '⚠️ Product not found in your cart.';
-    }
+        if (items.isEmpty()) {
+            return '⚠️ Product not found in your cart.';
+        }
 
-    Order_Line_Item__c item = items[0];
-    if (item.Quantity__c == 1) {
-        delete item;
-        return '🗑️ Product removed from cart.';
-    } else {
-        item.Quantity__c -= 1;
-        update item;
-        return '➖ Product quantity decreased.';
+        Order_Line_Item__c item = items[0];
+        
+        // Check if requested removal quantity exceeds available quantity
+        if (quantity > item.Quantity__c) {
+            return '❌ You cannot remove more than the available quantity (' + item.Quantity__c + ') of ' + item.DMS_Product_Name__r.Name + ' in your cart.';
+        }
+        
+        // If removing all quantity, delete the line item
+        if (quantity == item.Quantity__c) {
+            delete item;
+            return '🗑️ ' + quantity + ' ' + item.DMS_Product_Name__r.Name + ' removed from cart.';
+        } 
+        // If removing partial quantity, update the line item
+        else {
+            item.Quantity__c -= quantity;
+            update item;
+            return '➖ Removed ' + quantity + ' of ' + item.DMS_Product_Name__r.Name + '. New quantity: ' + item.Quantity__c;
+        }
+    } catch (Exception e) {
+        return '❌ Error removing item: ' + e.getMessage();
     }
 }
 }
