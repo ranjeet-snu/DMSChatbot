@@ -155,17 +155,53 @@ export default class ChatBotContainer extends LightningElement {
 
         else if (input.startsWith('add ')) {
             this.isBotTyping = true;
-            const name = input.replace('add ', '').trim().toLowerCase();
+            const inputParts = input.replace('add ', '').trim().split(/\s+/);
+            
+            let quantity = 1; // Default quantity
+            let unit = '';    // Default unit (empty if not specified)
+            let name;
+            
+            // Check if the first part contains a number (like "5kg" or "2L")
+            const quantityUnitMatch = inputParts[0].match(/(\d+)(\D*)/);
+            
+            if (quantityUnitMatch) {
+                quantity = parseInt(quantityUnitMatch[1], 10);
+                unit = quantityUnitMatch[2].trim(); // Get the unit part (kg, L, etc.)
+                
+                // If there's more parts after the quantity+unit, use them as name
+                name = inputParts.slice(1).join(' ').toLowerCase();
+                
+                // If no name parts after quantity+unit, maybe quantity+unit was combined with name (like "5kgatta")
+                if (!name && inputParts[0].length > quantityUnitMatch[0].length) {
+                    name = inputParts[0].substring(quantityUnitMatch[0].length) + 
+                          (inputParts.slice(1).join(' ') || '');
+                }
+            } else {
+                // No quantity found, use the entire input as product name
+                name = inputParts.join(' ').toLowerCase();
+            }
+            
+            console.log('quantity', quantity);
+            console.log('unit', unit);
             console.log('name', name);
+            
             const products = await getAvailableProducts();
             const match = products.find(p => p.Name.toLowerCase() === name);
+            
             if (match) {
-                await addToCart({ contactId: this.recordId, productId: match.Id });
+                await addToCart({ 
+                    contactId: this.recordId, 
+                    productId: match.Id,
+                    quantity: quantity
+                });
                 this.isBotTyping = false;
-                this.addBotMessage(`✅ ${match.Name} added to cart.`, null);
+                
+                // Create the display message with unit if it exists
+                const quantityDisplay = unit ? `${quantity}${unit}` : quantity;
+                this.addBotMessage(`✅ ${quantityDisplay} ${match.Name} added to cart.`, null);
             } else {
                 this.isBotTyping = false;
-                this.addBotMessage(`❌ Product not found.`, null);
+                this.addBotMessage(`❌ Product "${name}" not found.`, null);
             }
         }
 
