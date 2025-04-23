@@ -200,7 +200,14 @@ public static String removeItem(String contactId, String productId, Integer quan
         if (quantity > item.Quantity__c) {
             return '❌ You cannot remove more than the available quantity (' + item.Quantity__c + ') of ' + item.DMS_Product_Name__r.Name + ' in your cart.';
         }
-        
+        if (quantity == 0) {
+            delete item;
+            return  item.DMS_Product_Name__r.Name + ' removed from cart.';
+        } 
+        if (quantity == item.Quantity__c) {
+            delete item;
+            return '🗑️ ' + quantity + ' ' + item.DMS_Product_Name__r.Name + ' removed from cart.';
+        } 
         // If removing all quantity, delete the line item
         if (quantity == item.Quantity__c) {
             delete item;
@@ -210,7 +217,7 @@ public static String removeItem(String contactId, String productId, Integer quan
         else {
             item.Quantity__c -= quantity;
             update item;
-            return '➖ Removed ' + quantity + ' of ' + item.DMS_Product_Name__r.Name + '. New quantity: ' + item.Quantity__c;
+            return ' Removed ' + quantity + ' of ' + item.DMS_Product_Name__r.Name  ;
         }
     } catch (Exception e) {
         return '❌ Error removing item: ' + e.getMessage();
