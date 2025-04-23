@@ -258,21 +258,53 @@ export default class ChatBotContainer extends LightningElement {
 
         else if (input.startsWith('remove ')) {
             this.isBotTyping = true;
-            const productName = input.replace('remove ', '').trim().toLowerCase();
+            const inputWithoutCommand = input.replace('remove ', '').trim();
+            
+            let quantity = 1;
+            let productName = inputWithoutCommand.toLowerCase();
+            
+            // First try to extract quantity and unit from the beginning
+            const beginningMatch = inputWithoutCommand.match(/^(\d+)\s*([a-zA-Z]*)\s*(.*)/);
+            
+            if (beginningMatch) {
+                quantity = parseInt(beginningMatch[1], 10);
+                const unit = beginningMatch[2]; // We don't actually need this for removal
+                productName = beginningMatch[3].toLowerCase();
+                
+                // If we didn't get a name after quantity+unit, try alternative patterns
+                if (!productName) {
+                    // Try pattern like "atta 2kg"
+                    const endMatch = inputWithoutCommand.match(/(.*)\s(\d+)\s*([a-zA-Z]*)$/);
+                    if (endMatch) {
+                        productName = endMatch[1].toLowerCase();
+                        quantity = parseInt(endMatch[2], 10);
+                    }
+                }
+            }
+            
+            // Final fallback - use the entire input as product name
+            if (!productName) {
+                productName = inputWithoutCommand.toLowerCase();
+            }
+            
+            // Clean up product name (remove any remaining numbers/units)
+            productName = productName.replace(/\d+\s*[a-zA-Z]*\s*/, '').trim();
+            
+            console.log('Removing - quantity:', quantity, 'product:', productName);
             
             try {
-                // Get all available products to find the ID
                 const products = await getAvailableProducts();
                 const product = products.find(p => p.Name.toLowerCase() === productName);
                 
                 if (product) {
                     const result = await removeItem({
                         contactId: this.recordId,
-                        productId: product.Id
+                        productId: product.Id,
+                        quantity: quantity
                     });
                     
                     if (result.includes('removed')) {
-                        this.addBotMessage(`✅ ${product.Name} removed from cart.`, null);
+                        this.addBotMessage(`✅ ${quantity} ${product.Name} removed from cart.`, null);
                     } else {
                         this.addBotMessage(`❌ ${result}`, null);
                     }
