@@ -182,19 +182,24 @@ public static String removeItem(String contactId, String productId) {
 
     // 2. Find the order line item for this product
     List<Order_Line_Item__c> items = [
-        SELECT Id 
+        SELECT Id, Quantity__c 
         FROM Order_Line_Item__c 
         WHERE DMS_Order__c = :orderId AND DMS_Product_Name__c = :productId
+        LIMIT 1
     ];
 
     if (items.isEmpty()) {
-        return '⚠️ :Product not found in your cart.';
+        return '⚠️ Product not found in your cart.';
     }
 
-    delete items;
-
-    return '🗑️ Product removed from cart.';
+    Order_Line_Item__c item = items[0];
+    if (item.Quantity__c == 1) {
+        delete item;
+        return '🗑️ Product removed from cart.';
+    } else {
+        item.Quantity__c -= 1;
+        update item;
+        return '➖ Product quantity decreased.';
+    }
 }
-
-
 }
