@@ -9,7 +9,7 @@ import removeItem from '@salesforce/apex/OrderChatController.removeItem';
 import botAvatar from '@salesforce/resourceUrl/botAvatar';
 import userAvatar from '@salesforce/resourceUrl/userAvatar';
 import chatbotLogo from '@salesforce/resourceUrl/chatbotLogo';
-import getGeminiResponse from '@salesforce/apex/GeminiController.getGeminiResponse';
+import getGeminiResponse from '@salesforce/apex/geminiControllerCopy.getGeminiResponse';
 
 export default class ChatBotContainer extends LightningElement {
     @api recordId;
@@ -20,6 +20,7 @@ export default class ChatBotContainer extends LightningElement {
     @track isBotTyping = false;
     @track showQuickReplies = false;
     @track quickReplies = [];
+    @track result;
 
     botAvatar = botAvatar;
     userAvatar = userAvatar;
@@ -46,7 +47,7 @@ export default class ChatBotContainer extends LightningElement {
                 <p><strong>✍️ Tip:</strong> You can also type commands directly!</p>
                 <ul>
                     <li>➕ <strong>Add [product name]</strong> — to add an item to your cart</li>
-                    <li>❌ <strong>Remove [product name]</strong> — to remove an item from your cart</li>
+                    <li><strong>Remove [product name]</strong> — to remove an item from your cart</li>
                 </ul>
             </div>`,
             this.defaultQuickReplies,
@@ -119,11 +120,17 @@ export default class ChatBotContainer extends LightningElement {
         const msg = this.inputText.trim();
         if (!msg) return;
         this.addUserMessage(msg);
+        console.log(msg);
         this.processInput(msg.toLowerCase());
         this.inputText = '';
     }
 
     async processInput(input) {
+
+        const geminiResult = await getGeminiResponse({input});
+        this.result = geminiResult;
+        console.log("result: ", geminiResult);
+        
         if (input === 'show products') {
             this.isBotTyping = true;
 
@@ -260,7 +267,7 @@ export default class ChatBotContainer extends LightningElement {
             this.isBotTyping = true;
             const inputWithoutCommand = input.replace('remove ', '').trim();
             
-            let quantity = 1;
+            let quantity = 0; // Default to 0 if no quantity is specified
             let productName = inputWithoutCommand.toLowerCase();
             
             // First try to extract quantity and unit from the beginning
@@ -295,7 +302,7 @@ export default class ChatBotContainer extends LightningElement {
             try {
                 const products = await getAvailableProducts();
                 const product = products.find(p => p.Name.toLowerCase() === productName);
-                
+                console.log('quantity to remove:', quantity)
                 if (product) {
                     const result = await removeItem({
                         contactId: this.recordId,
@@ -304,7 +311,12 @@ export default class ChatBotContainer extends LightningElement {
                     });
                     
                     if (result.includes('removed')) {
-                        this.addBotMessage(`✅ ${quantity} ${product.Name} removed from cart.`, null);
+                        // Custom message when quantity is 0
+                        if (quantity === 0) {
+                            this.addBotMessage(`✅ ${product.Name} removed from cart.`, null);
+                        } else {
+                            this.addBotMessage(`✅ ${quantity} ${product.Name} removed from cart.`, null);
+                        }
                     } else {
                         this.addBotMessage(`❌ ${result}`, null);
                     }
